@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-import { SiInstagram, SiX } from "react-icons/si";
-import { Linkedin } from "lucide-react";
+import { SiInstagram } from "react-icons/si";
+import { Linkedin, Mail } from "lucide-react";
 
 export function Footer() {
   return (
@@ -55,16 +55,32 @@ export function Footer() {
 
           {/* Social */}
           <div>
-            <h4 className="text-lg font-bold mb-4 text-white">Follow Us</h4>
+            <h4 className="text-lg font-bold mb-4 text-white">Connect With Us</h4>
             <div className="flex gap-4">
-              <a href="#" className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all">
+              <a
+                href="https://www.instagram.com/bfs.cottonuniversity"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all"
+                aria-label="Instagram"
+              >
                 <SiInstagram size={18} />
               </a>
-              <a href="#" className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all">
+              <a
+                href="https://www.linkedin.com/company/business-finance-society-cotton-university"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all"
+                aria-label="LinkedIn"
+              >
                 <Linkedin size={18} />
               </a>
-              <a href="#" className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all">
-                <SiX size={18} />
+              <a
+                href="mailto:businessandfinance.society@gmail.com"
+                className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all"
+                aria-label="Email"
+              >
+                <Mail size={18} />
               </a>
             </div>
             <div className="mt-8">
