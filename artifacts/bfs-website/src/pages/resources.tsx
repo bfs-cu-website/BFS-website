@@ -1,13 +1,28 @@
 import { motion } from "framer-motion";
-import { resources } from "@/data/resources";
+import { resources, ResourceItem } from "@/data/resources";
 import { Book, Link as LinkIcon, FileText, Wrench, ArrowUpRight } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-const icons: Record<string, any> = {
+const categoryIcons: Record<string, LucideIcon> = {
   "Books": Book,
   "Courses": LinkIcon,
   "Reports": FileText,
   "Tools": Wrench
 };
+
+function getResourceUrl(resource: ResourceItem): string | undefined {
+  if (resource.kind === "course") return resource.url;
+  if (resource.kind === "report") return resource.url;
+  if (resource.kind === "tool") return resource.url;
+  return undefined;
+}
+
+function getResourceByline(resource: ResourceItem): string | undefined {
+  if (resource.kind === "book") return resource.author;
+  if (resource.kind === "course") return resource.provider;
+  if (resource.kind === "report") return resource.provider;
+  return undefined;
+}
 
 export default function Resources() {
   const container = {
@@ -34,7 +49,7 @@ export default function Resources() {
           >
             <h1 className="text-4xl md:text-5xl font-black mb-4">Learning Hub</h1>
             <p className="text-lg text-gray-300 font-serif">
-              Curated materials, reports, and tools to accelerate your financial literacy journey.
+              Curated books, courses, reports, and tools to accelerate your financial literacy journey.
             </p>
           </motion.div>
         </div>
@@ -48,8 +63,8 @@ export default function Resources() {
           className="space-y-16"
         >
           {resources.map((section, idx) => {
-            const Icon = icons[section.category] || Book;
-            
+            const Icon = categoryIcons[section.category] ?? Book;
+
             return (
               <motion.div key={idx} variants={item}>
                 <div className="flex items-center gap-3 mb-6 border-b border-gray-200 pb-4">
@@ -60,34 +75,39 @@ export default function Resources() {
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {section.items.map((resource, itemIdx) => (
-                    <a 
-                      key={itemIdx}
-                      href={(resource as any).url || "#"} 
-                      target={(resource as any).url ? "_blank" : undefined}
-                      rel="noopener noreferrer"
-                      className="group bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-accent/30 transition-all flex flex-col h-full"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-primary group-hover:text-accent transition-colors text-lg leading-tight pr-4">
-                          {resource.title}
-                        </h3>
-                        {(resource as any).url && (
-                          <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-accent shrink-0" />
-                        )}
-                      </div>
-                      
-                      {((resource as any).author || (resource as any).provider) && (
-                        <div className="text-xs font-bold text-accent uppercase tracking-wider mb-2">
-                          {(resource as any).author || (resource as any).provider}
+                  {section.items.map((resource, itemIdx) => {
+                    const url = getResourceUrl(resource);
+                    const byline = getResourceByline(resource);
+
+                    return (
+                      <a 
+                        key={itemIdx}
+                        href={url ?? "#"}
+                        target={url ? "_blank" : undefined}
+                        rel="noopener noreferrer"
+                        className="group bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-accent/30 transition-all flex flex-col h-full"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-bold text-primary group-hover:text-accent transition-colors text-lg leading-tight pr-4">
+                            {resource.title}
+                          </h3>
+                          {url && (
+                            <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-accent shrink-0" />
+                          )}
                         </div>
-                      )}
-                      
-                      <p className="text-sm text-muted-foreground font-serif leading-relaxed mt-auto">
-                        {resource.description}
-                      </p>
-                    </a>
-                  ))}
+
+                        {byline && (
+                          <div className="text-xs font-bold text-accent uppercase tracking-wider mb-2">
+                            {byline}
+                          </div>
+                        )}
+
+                        <p className="text-sm text-muted-foreground font-serif leading-relaxed mt-auto">
+                          {resource.description}
+                        </p>
+                      </a>
+                    );
+                  })}
                 </div>
               </motion.div>
             );
