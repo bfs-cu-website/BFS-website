@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import bfsLogo from "@assets/1637321564631_1775381095551.png";
+const bfsLogo = "/bfs-logo.png";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
