@@ -1,14 +1,24 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, ChevronRight, TrendingUp, Users, Target, BookOpen, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { events } from "@/data/events";
+import { events as staticEvents } from "@/data/events";
+import { fetchEvents, type ApiEvent } from "@/lib/api";
 import { blogPosts } from "@/data/blog";
 
 export default function Home() {
-  const upcomingEvents = events.filter(e => e.status === "upcoming").slice(0, 3);
-  const pastEvents = events.filter(e => e.status === "past").slice(0, 3);
+  const [allEvents, setAllEvents] = useState<ApiEvent[]>(staticEvents);
+
+  useEffect(() => {
+    fetchEvents()
+      .then(setAllEvents)
+      .catch(() => setAllEvents(staticEvents));
+  }, []);
+
+  const upcomingEvents = allEvents.filter(e => e.status === "upcoming").slice(0, 3);
+  const pastEvents = allEvents.filter(e => e.status === "past").slice(0, 3);
   const recentPosts = blogPosts.slice(0, 3);
 
   const categoryColors: Record<string, string> = {

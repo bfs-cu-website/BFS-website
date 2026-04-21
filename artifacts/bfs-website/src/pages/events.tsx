@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { events } from "@/data/events";
-import { Calendar, MapPin, ArrowRight } from "lucide-react";
+import { events as staticEvents } from "@/data/events";
+import { fetchEvents, type ApiEvent } from "@/lib/api";
+import { Calendar, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Events() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
-  
-  const filteredEvents = events.filter(e => e.status === activeTab);
+  const [events, setEvents] = useState<ApiEvent[]>(staticEvents);
+
+  useEffect(() => {
+    fetchEvents()
+      .then(setEvents)
+      .catch(() => setEvents(staticEvents));
+  }, []);
+
+  const filteredEvents = events.filter((e) => e.status === activeTab);
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-gray-50">
@@ -27,14 +35,13 @@ export default function Events() {
       </section>
 
       <div className="container mx-auto px-4">
-        {/* Tabs */}
         <div className="flex justify-center mb-12">
           <div className="inline-flex bg-gray-200/50 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("upcoming")}
               className={`px-8 py-3 rounded-md text-sm font-bold transition-all ${
-                activeTab === "upcoming" 
-                  ? "bg-white text-primary shadow-sm" 
+                activeTab === "upcoming"
+                  ? "bg-white text-primary shadow-sm"
                   : "text-muted-foreground hover:text-primary"
               }`}
             >
@@ -43,8 +50,8 @@ export default function Events() {
             <button
               onClick={() => setActiveTab("past")}
               className={`px-8 py-3 rounded-md text-sm font-bold transition-all ${
-                activeTab === "past" 
-                  ? "bg-white text-primary shadow-sm" 
+                activeTab === "past"
+                  ? "bg-white text-primary shadow-sm"
                   : "text-muted-foreground hover:text-primary"
               }`}
             >
@@ -53,7 +60,6 @@ export default function Events() {
           </div>
         </div>
 
-        {/* Events Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <AnimatePresence mode="popLayout">
             {filteredEvents.map((event, i) => (
@@ -67,11 +73,17 @@ export default function Events() {
                 className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col"
               >
                 <div className="aspect-video overflow-hidden relative bg-gray-100">
-                  <img 
-                    src={event.image} 
-                    alt={event.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
+                  {event.image ? (
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#0A2540] to-[#1a3a60] flex items-center justify-center">
+                      <span className="text-white/30 text-4xl font-black">{event.category[0]}</span>
+                    </div>
+                  )}
                   <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-3 py-1 rounded text-xs font-bold text-primary">
                     {event.category}
                   </div>
@@ -81,11 +93,16 @@ export default function Events() {
                     <Calendar className="w-4 h-4 mr-2 text-accent" />
                     {event.date}
                   </div>
-                  <h3 className="text-xl font-bold text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
+                  <h3 className="text-xl font-bold text-primary mb-3 group-hover:text-accent transition-colors">
+                    {event.title}
+                  </h3>
                   <p className="text-muted-foreground text-sm mb-6 flex-1 font-serif leading-relaxed">
                     {event.description}
                   </p>
-                  <Button variant="outline" className="w-full justify-between group-hover:border-accent group-hover:text-accent transition-colors">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between group-hover:border-accent group-hover:text-accent transition-colors"
+                  >
                     View Details
                     <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
                   </Button>
