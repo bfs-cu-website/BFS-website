@@ -1,19 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { events as staticEvents } from "@/data/events";
-import { fetchEvents, type ApiEvent } from "@/lib/api";
+import { useEvents } from "@/lib/useEvents";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Events() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
-  const [events, setEvents] = useState<ApiEvent[]>(staticEvents);
-
-  useEffect(() => {
-    fetchEvents()
-      .then(setEvents)
-      .catch(() => setEvents(staticEvents));
-  }, []);
+  const { events } = useEvents();
 
   const filteredEvents = events.filter((e) => e.status === activeTab);
 

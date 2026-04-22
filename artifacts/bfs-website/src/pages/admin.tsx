@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { fetchEvents, createEvent, updateEvent, deleteEvent, type ApiEvent, type EventInput } from "@/lib/api";
+import {
+  fetchEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  loginAdmin,
+  logoutAdmin,
+  checkAdminSession,
+  type ApiEvent,
+  type EventInput,
+} from "@/lib/api";
 
 const CATEGORIES = ["Flagship", "Field Visit", "Orientation", "Competition", "Social", "Workshop", "Talk", "Other"];
 const STATUSES = ["upcoming", "past"];
@@ -167,7 +177,7 @@ function DeleteConfirm({
 
 export default function Admin() {
   const [password, setPassword] = useState("");
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -184,26 +194,30 @@ export default function Admin() {
 
   const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "past">("all");
 
+  useEffect(() => {
+    checkAdminSession()
+      .then((valid) => setAuthed(valid))
+      .catch(() => setAuthed(false));
+  }, []);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
     try {
-      const res = await fetch("/api/events", {
-        headers: { "x-admin-password": password },
-      });
-      if (res.status === 401) {
-        setAuthError("Incorrect password. Please try again.");
-        setAuthLoading(false);
-        return;
-      }
-      const data: ApiEvent[] = await res.json();
-      setEvents(data);
+      await loginAdmin(password);
       setAuthed(true);
-    } catch {
-      setAuthError("Could not connect to the server. Please try again.");
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "An error occurred.");
     }
     setAuthLoading(false);
+  }
+
+  async function handleSignOut() {
+    await logoutAdmin();
+    setAuthed(false);
+    setPassword("");
+    setEvents([]);
   }
 
   async function loadEvents() {
@@ -232,10 +246,10 @@ export default function Admin() {
     setActionError("");
     try {
       if (editTarget) {
-        await updateEvent(editTarget.id, data, password);
+        await updateEvent(editTarget.id, data);
         showSuccess("Event updated successfully.");
       } else {
-        await createEvent(data, password);
+        await createEvent(data);
         showSuccess("Event added successfully.");
       }
       setShowForm(false);
@@ -252,7 +266,7 @@ export default function Admin() {
     setActionLoading(true);
     setActionError("");
     try {
-      await deleteEvent(deleteTarget.id, password);
+      await deleteEvent(deleteTarget.id);
       showSuccess("Event deleted successfully.");
       setDeleteTarget(null);
       await loadEvents();
@@ -265,6 +279,14 @@ export default function Admin() {
   const filtered = events.filter((e) =>
     filterStatus === "all" ? true : e.status === filterStatus,
   );
+
+  if (authed === null) {
+    return (
+      <div className="min-h-screen bg-[#0A2540] flex items-center justify-center">
+        <div className="text-white text-sm opacity-60">Checking session…</div>
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
@@ -324,7 +346,7 @@ export default function Admin() {
             ← View Website
           </a>
           <button
-            onClick={() => { setAuthed(false); setPassword(""); setEvents([]); }}
+            onClick={handleSignOut}
             className="text-sm text-gray-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10"
           >
             Sign Out

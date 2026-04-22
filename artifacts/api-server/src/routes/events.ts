@@ -1,21 +1,31 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, eventsTable, insertEventSchema, updateEventSchema } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
+import { COOKIE_NAME } from "./auth";
 
 const router: IRouter = Router();
 
 function requireAdmin(req: Request, res: Response): boolean {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) {
-    res.status(503).json({ error: "Admin password not configured on server." });
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    res.status(503).json({ error: "Auth not configured on server." });
     return false;
   }
-  const provided = req.headers["x-admin-password"];
-  if (provided !== adminPassword) {
-    res.status(401).json({ error: "Unauthorized. Invalid admin password." });
+
+  const token = (req.cookies as Record<string, string | undefined>)[COOKIE_NAME];
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized. Please log in." });
     return false;
   }
-  return true;
+
+  try {
+    jwt.verify(token, jwtSecret);
+    return true;
+  } catch {
+    res.status(401).json({ error: "Session expired. Please log in again." });
+    return false;
+  }
 }
 
 function isZodError(err: unknown): err is { issues: unknown[] } {
