@@ -1,21 +1,13 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { ArrowRight, ChevronRight, TrendingUp, Users, Target, BookOpen, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { events as staticEvents } from "@/data/events";
-import { fetchEvents, type ApiEvent } from "@/lib/api";
+import { useEvents } from "@/lib/useEvents";
 import { blogPosts } from "@/data/blog";
 
 export default function Home() {
-  const [allEvents, setAllEvents] = useState<ApiEvent[]>(staticEvents);
-
-  useEffect(() => {
-    fetchEvents()
-      .then(setAllEvents)
-      .catch(() => setAllEvents(staticEvents));
-  }, []);
+  const { events: allEvents } = useEvents();
 
   const upcomingEvents = allEvents.filter(e => e.status === "upcoming").slice(0, 3);
   const pastEvents = allEvents.filter(e => e.status === "past").slice(0, 3);

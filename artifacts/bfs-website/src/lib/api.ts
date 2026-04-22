@@ -43,8 +43,8 @@ export async function checkAdminSession(): Promise<boolean> {
   return res.ok;
 }
 
-export async function fetchEvents(): Promise<ApiEvent[]> {
-  const res = await fetch(`${BASE}/events`);
+export async function fetchEvents(signal?: AbortSignal): Promise<ApiEvent[]> {
+  const res = await fetch(`${BASE}/events`, { signal });
   if (!res.ok) throw new Error("Failed to fetch events");
   return res.json();
 }
