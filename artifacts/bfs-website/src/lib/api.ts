@@ -21,6 +21,9 @@ export async function loginAdmin(password: string): Promise<void> {
     credentials: "include",
     body: JSON.stringify({ password }),
   });
+  if (res.status === 429) {
+    throw new Error("Too many failed login attempts. Please try again in 15 minutes.");
+  }
   if (res.status === 401) {
     throw new Error("Incorrect password. Please try again.");
   }
