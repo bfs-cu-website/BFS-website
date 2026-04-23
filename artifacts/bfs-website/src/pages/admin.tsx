@@ -7,6 +7,7 @@ import {
   loginAdmin,
   logoutAdmin,
   checkAdminSession,
+  SessionExpiredError,
   type ApiEvent,
   type EventInput,
 } from "@/lib/api";
@@ -23,7 +24,7 @@ const DEFAULT_FORM: EventInput = {
   image: "",
 };
 
-function usePhotoUpload(onUploaded: (imageUrl: string) => void) {
+function usePhotoUpload(onUploaded: (imageUrl: string) => void, onSessionExpired: () => void) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -34,8 +35,13 @@ function usePhotoUpload(onUploaded: (imageUrl: string) => void) {
       const metaRes = await fetch("/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "application/octet-stream" }),
       });
+      if (metaRes.status === 401) {
+        onSessionExpired();
+        return;
+      }
       if (!metaRes.ok) {
         const data = await metaRes.json() as { error?: string };
         throw new Error(data.error ?? "Failed to get upload URL");
@@ -55,7 +61,7 @@ function usePhotoUpload(onUploaded: (imageUrl: string) => void) {
     } finally {
       setIsUploading(false);
     }
-  }, [onUploaded]);
+  }, [onUploaded, onSessionExpired]);
 
   return { uploadFile, isUploading, uploadError };
 }
@@ -64,11 +70,13 @@ function EventForm({
   initial,
   onSave,
   onCancel,
+  onSessionExpired,
   loading,
 }: {
   initial: EventInput;
   onSave: (data: EventInput) => void;
   onCancel: () => void;
+  onSessionExpired: () => void;
   loading: boolean;
 }) {
   const [form, setForm] = useState<EventInput>(initial);
@@ -78,7 +86,7 @@ function EventForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  const { uploadFile, isUploading, uploadError } = usePhotoUpload((url) => set("image", url));
+  const { uploadFile, isUploading, uploadError } = usePhotoUpload((url) => set("image", url), onSessionExpired);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -334,6 +342,16 @@ export default function Admin() {
     setTimeout(() => setSuccessMsg(""), 3000);
   }
 
+  function handleSessionExpired() {
+    setAuthed(false);
+    setPassword("");
+    setEvents([]);
+    setShowForm(false);
+    setEditTarget(null);
+    setDeleteTarget(null);
+    setAuthError("Your session has expired. Please sign in again.");
+  }
+
   async function handleSave(data: EventInput) {
     setActionLoading(true);
     setActionError("");
@@ -349,9 +367,14 @@ export default function Admin() {
       setEditTarget(null);
       await loadEvents();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "An error occurred.");
+      if (err instanceof SessionExpiredError) {
+        handleSessionExpired();
+      } else {
+        setActionError(err instanceof Error ? err.message : "An error occurred.");
+      }
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   }
 
   async function handleDelete() {
@@ -364,9 +387,14 @@ export default function Admin() {
       setDeleteTarget(null);
       await loadEvents();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "An error occurred.");
+      if (err instanceof SessionExpiredError) {
+        handleSessionExpired();
+      } else {
+        setActionError(err instanceof Error ? err.message : "An error occurred.");
+      }
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   }
 
   const filtered = events.filter((e) =>
@@ -569,6 +597,7 @@ export default function Admin() {
             : DEFAULT_FORM}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditTarget(null); }}
+          onSessionExpired={handleSessionExpired}
           loading={actionLoading}
         />
       )}

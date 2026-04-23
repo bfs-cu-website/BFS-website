@@ -6,7 +6,7 @@ import {
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
-import { COOKIE_NAME } from "./auth";
+import { COOKIE_NAME, refreshSession } from "./auth";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -24,6 +24,7 @@ function requireAdmin(req: Request, res: Response): boolean {
   }
   try {
     jwt.verify(token, jwtSecret);
+    refreshSession(res);
     return true;
   } catch {
     res.status(401).json({ error: "Session expired. Please log in again." });

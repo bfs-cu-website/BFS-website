@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, eventsTable, insertEventSchema, updateEventSchema } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import jwt from "jsonwebtoken";
-import { COOKIE_NAME } from "./auth";
+import { COOKIE_NAME, refreshSession } from "./auth";
 
 const router: IRouter = Router();
 
@@ -21,6 +21,7 @@ function requireAdmin(req: Request, res: Response): boolean {
 
   try {
     jwt.verify(token, jwtSecret);
+    refreshSession(res);
     return true;
   } catch {
     res.status(401).json({ error: "Session expired. Please log in again." });

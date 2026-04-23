@@ -1,3 +1,10 @@
+export class SessionExpiredError extends Error {
+  constructor() {
+    super("Your session has expired. Please sign in again.");
+    this.name = "SessionExpiredError";
+  }
+}
+
 export type ApiEvent = {
   id: number;
   title: string;
@@ -59,6 +66,7 @@ export async function createEvent(data: EventInput): Promise<ApiEvent> {
     credentials: "include",
     body: JSON.stringify(data),
   });
+  if (res.status === 401) throw new SessionExpiredError();
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? "Failed to create event");
@@ -76,6 +84,7 @@ export async function updateEvent(
     credentials: "include",
     body: JSON.stringify(data),
   });
+  if (res.status === 401) throw new SessionExpiredError();
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? "Failed to update event");
@@ -88,6 +97,7 @@ export async function deleteEvent(id: number): Promise<void> {
     method: "DELETE",
     credentials: "include",
   });
+  if (res.status === 401) throw new SessionExpiredError();
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? "Failed to delete event");
