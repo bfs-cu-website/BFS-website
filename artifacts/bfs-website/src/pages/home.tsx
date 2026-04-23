@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen w-full">
       {/* HERO SECTION */}
-      <section className="relative min-h-[90vh] flex items-center pt-20 overflow-hidden bg-primary">
+      <section className="relative min-h-[90vh] flex items-center pt-20 pb-24 overflow-hidden bg-primary">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop')" }}
@@ -40,7 +40,7 @@ export default function Home() {
             <div className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-accent font-medium text-sm mb-6 backdrop-blur-sm">
               Established 2021 • Cotton University
             </div>
-            <h1 className="text-5xl md:text-7xl font-black text-white leading-tight mb-6 font-sans">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-tight mb-6 font-sans">
               Nurturing Future <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-200">Business Leaders</span>
             </h1>
