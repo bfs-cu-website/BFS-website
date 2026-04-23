@@ -63,7 +63,7 @@ export default function Home() {
         </div>
       </section>
       {/* STATS SECTION */}
-      <section className="py-16 relative z-20 mx-4 md:mx-auto container rounded-xl shadow-xl shadow-primary/5 opacity-[1] mb-[0px] mt-[20px] bg-[#edf1ff] ml-[0px] mr-[0px]">
+      <section className="py-16 relative z-20 mx-4 md:mx-auto container rounded-xl shadow-xl shadow-primary/5 opacity-[1] mb-[0px] bg-[#edf1ff] ml-[0px] mr-[0px] mt-[-40px]">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 px-8">
           {[
             { label: "Founded", value: "2021" },
