@@ -26,7 +26,6 @@ export function Navbar() {
     { href: "/about", label: "About" },
     { href: "/events", label: "Events" },
     { href: "/team", label: "Team" },
-    { href: "/blog", label: "Blog" },
     { href: "/resources", label: "Resources" },
   ];
 

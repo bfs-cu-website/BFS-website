@@ -11,7 +11,6 @@ import Home from "@/pages/home";
 import About from "@/pages/about";
 import Events from "@/pages/events";
 import Team from "@/pages/team";
-import Blog from "@/pages/blog";
 import Resources from "@/pages/resources";
 import Join from "@/pages/join";
 import Admin from "@/pages/admin";
@@ -28,7 +27,6 @@ function PublicLayout() {
           <Route path="/about" component={About} />
           <Route path="/events" component={Events} />
           <Route path="/team" component={Team} />
-          <Route path="/blog" component={Blog} />
           <Route path="/resources" component={Resources} />
           <Route path="/join" component={Join} />
           <Route component={NotFound} />

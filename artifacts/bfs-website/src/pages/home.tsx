@@ -4,21 +4,12 @@ import { ArrowRight, ChevronRight, TrendingUp, Users, Target, BookOpen, Calendar
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useEvents } from "@/lib/useEvents";
-import { blogPosts } from "@/data/blog";
 
 export default function Home() {
   const { events: allEvents } = useEvents();
 
   const upcomingEvents = allEvents.filter(e => e.status === "upcoming").slice(0, 3);
   const pastEvents = allEvents.filter(e => e.status === "past").slice(0, 3);
-  const recentPosts = blogPosts.slice(0, 3);
-
-  const categoryColors: Record<string, string> = {
-    Finance: "bg-blue-100 text-blue-800",
-    Startups: "bg-green-100 text-green-800",
-    Markets: "bg-purple-100 text-purple-800",
-    Economics: "bg-orange-100 text-orange-800",
-  };
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -235,53 +226,6 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-      {/* FEATURED BLOG POSTS */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-end mb-12">
-            <div>
-              <h2 className="text-sm font-bold text-accent tracking-widest uppercase mb-3">From Our Members</h2>
-              <h3 className="text-3xl md:text-5xl font-bold text-primary">Insights & Analysis</h3>
-            </div>
-            <Link href="/blog" className="hidden md:inline-flex items-center text-primary font-bold hover:text-accent transition-colors">
-              Read all articles <ChevronRight className="ml-1 w-5 h-5" />
-            </Link>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {recentPosts.map((post, i) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="group border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 bg-white"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${categoryColors[post.category] ?? "bg-gray-100 text-gray-700"}`}>
-                    {post.category}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{post.date}</span>
-                </div>
-                <h4 className="text-xl font-bold text-primary mb-3 group-hover:text-accent transition-colors leading-snug">
-                  {post.title}
-                </h4>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">{post.excerpt}</p>
-                <Link href="/blog" className="inline-flex items-center text-sm text-primary font-semibold hover:text-accent transition-colors">
-                  Read Article <ArrowRight className="ml-1 w-4 h-4" />
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center md:hidden">
-            <Link href="/blog">
-              <Button variant="outline" className="w-full">Read All Articles</Button>
-            </Link>
           </div>
         </div>
       </section>
