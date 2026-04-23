@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { submitApplication } from "@/lib/api";
 
 const interestsOptions = [
   { id: "finance", label: "Finance & Investing" },
@@ -46,6 +47,8 @@ const formSchema = z.object({
 
 export default function Join() {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,10 +61,19 @@ export default function Join() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app, this would be an API call
-    console.log(values);
-    setIsSubmitted(true);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      await submitApplication(values);
+      setIsSubmitted(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -131,7 +143,7 @@ export default function Join() {
                   <p className="text-lg text-muted-foreground font-serif mb-8">
                     Thank you for your interest in joining the Business & Finance Society. We have received your application and will reach out to your email shortly regarding the next steps.
                   </p>
-                  <Button onClick={() => setIsSubmitted(false)} variant="outline" className="font-bold">
+                  <Button onClick={() => { setIsSubmitted(false); form.reset(); }} variant="outline" className="font-bold">
                     Submit Another Application
                   </Button>
                 </div>
@@ -280,8 +292,28 @@ export default function Join() {
                       )}
                     />
 
-                    <Button type="submit" size="lg" className="w-full h-14 text-lg bg-accent hover:bg-accent/90 text-primary font-bold">
-                      Submit Application <ChevronRight className="ml-2" />
+                    {submitError && (
+                      <p className="text-sm text-red-500 font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                        {submitError}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      size="lg"
+                      disabled={isSubmitting}
+                      className="w-full h-14 text-lg bg-accent hover:bg-accent/90 text-primary font-bold disabled:opacity-70"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Submitting…
+                        </>
+                      ) : (
+                        <>
+                          Submit Application <ChevronRight className="ml-2" />
+                        </>
+                      )}
                     </Button>
                   </form>
                 </Form>

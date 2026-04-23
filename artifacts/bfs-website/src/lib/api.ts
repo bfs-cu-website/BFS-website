@@ -19,6 +19,28 @@ export type ApiEvent = {
 
 export type EventInput = Omit<ApiEvent, "id" | "createdAt" | "updatedAt">;
 
+export type ApiApplication = {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  year: string;
+  interests: string;
+  essay: string;
+  status: "pending" | "accepted" | "rejected";
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ApplicationInput = {
+  name: string;
+  email: string;
+  department: string;
+  year: string;
+  interests: string[];
+  essay: string;
+};
+
 const BASE = "/api";
 
 export async function loginAdmin(password: string): Promise<void> {
@@ -101,5 +123,58 @@ export async function deleteEvent(id: number): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? "Failed to delete event");
+  }
+}
+
+export async function submitApplication(data: ApplicationInput): Promise<ApiApplication> {
+  const res = await fetch(`${BASE}/applications`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Failed to submit application.");
+  }
+  return res.json();
+}
+
+export async function fetchApplications(signal?: AbortSignal): Promise<ApiApplication[]> {
+  const res = await fetch(`${BASE}/applications`, {
+    credentials: "include",
+    signal,
+  });
+  if (res.status === 401) throw new SessionExpiredError();
+  if (!res.ok) throw new Error("Failed to fetch applications.");
+  return res.json();
+}
+
+export async function updateApplicationStatus(
+  id: number,
+  status: "pending" | "accepted" | "rejected",
+): Promise<ApiApplication> {
+  const res = await fetch(`${BASE}/applications/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ status }),
+  });
+  if (res.status === 401) throw new SessionExpiredError();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Failed to update status.");
+  }
+  return res.json();
+}
+
+export async function deleteApplication(id: number): Promise<void> {
+  const res = await fetch(`${BASE}/applications/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.status === 401) throw new SessionExpiredError();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Failed to delete application.");
   }
 }

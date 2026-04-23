@@ -7,9 +7,13 @@ import {
   loginAdmin,
   logoutAdmin,
   checkAdminSession,
+  fetchApplications,
+  updateApplicationStatus,
+  deleteApplication,
   SessionExpiredError,
   type ApiEvent,
   type EventInput,
+  type ApiApplication,
 } from "@/lib/api";
 
 const CATEGORIES = ["Flagship", "Field Visit", "Orientation", "Competition", "Social", "Workshop", "Talk", "Other"];
@@ -279,24 +283,126 @@ function DeleteConfirm({
   );
 }
 
+function ApplicationDetailModal({
+  app,
+  onClose,
+  onStatusChange,
+  onDelete,
+  loading,
+}: {
+  app: ApiApplication;
+  onClose: () => void;
+  onStatusChange: (status: "pending" | "accepted" | "rejected") => void;
+  onDelete: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-[#0A2540]">{app.name}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{app.email}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Department</p>
+            <p className="text-sm font-semibold text-[#0A2540]">{app.department}</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Year</p>
+            <p className="text-sm font-semibold text-[#0A2540]">{app.year}</p>
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Areas of Interest</p>
+          <div className="flex flex-wrap gap-2">
+            {app.interests.split(", ").map((interest) => (
+              <span key={interest} className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                {interest}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Statement of Purpose</p>
+          <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-4 font-serif">{app.essay}</p>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Decision</p>
+          <div className="flex gap-2">
+            {(["accepted", "pending", "rejected"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => onStatusChange(s)}
+                disabled={loading || app.status === s}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition disabled:cursor-not-allowed ${
+                  app.status === s
+                    ? s === "accepted"
+                      ? "bg-green-500 text-white"
+                      : s === "rejected"
+                      ? "bg-red-500 text-white"
+                      : "bg-amber-400 text-[#0A2540]"
+                    : "border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                }`}
+              >
+                {loading && app.status !== s ? "…" : s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={onDelete}
+          disabled={loading}
+          className="w-full py-2.5 text-sm font-bold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+        >
+          {loading ? "Deleting…" : "Delete Application"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-amber-50 text-amber-700",
+  accepted: "bg-green-50 text-green-700",
+  rejected: "bg-red-50 text-red-500",
+};
+
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"events" | "applications">("events");
+
+  // Events state
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState("");
-
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<ApiEvent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiEvent | null>(null);
+  const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "past">("all");
+
+  // Applications state
+  const [applications, setApplications] = useState<ApiApplication[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState("");
+  const [selectedApp, setSelectedApp] = useState<ApiApplication | null>(null);
+  const [appFilterStatus, setAppFilterStatus] = useState<"all" | "pending" | "accepted" | "rejected">("all");
+
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-
-  const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "past">("all");
 
   const [sessionWarnSeconds, setSessionWarnSeconds] = useState<number | null>(null);
   const [extendingSession, setExtendingSession] = useState(false);
@@ -365,6 +471,7 @@ export default function Admin() {
     setAuthed(false);
     setPassword("");
     setEvents([]);
+    setApplications([]);
   }
 
   async function loadEvents() {
@@ -381,8 +488,29 @@ export default function Admin() {
     setEventsLoading(false);
   }
 
+  async function loadApplications() {
+    setAppsLoading(true);
+    setAppsError("");
+    try {
+      const data = await fetchApplications();
+      setApplications(data);
+      lastRefreshRef.current = Date.now();
+      setSessionWarnSeconds(null);
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        handleSessionExpired();
+      } else {
+        setAppsError("Failed to load applications. Please refresh.");
+      }
+    }
+    setAppsLoading(false);
+  }
+
   useEffect(() => {
-    if (authed) loadEvents();
+    if (authed) {
+      loadEvents();
+      loadApplications();
+    }
   }, [authed]);
 
   function showSuccess(msg: string) {
@@ -394,9 +522,11 @@ export default function Admin() {
     setAuthed(false);
     setPassword("");
     setEvents([]);
+    setApplications([]);
     setShowForm(false);
     setEditTarget(null);
     setDeleteTarget(null);
+    setSelectedApp(null);
     setAuthError("Your session has expired. Please sign in again.");
   }
 
@@ -449,9 +579,53 @@ export default function Admin() {
     }
   }
 
-  const filtered = events.filter((e) =>
+  async function handleAppStatusChange(status: "pending" | "accepted" | "rejected") {
+    if (!selectedApp) return;
+    setActionLoading(true);
+    try {
+      const updated = await updateApplicationStatus(selectedApp.id, status);
+      setApplications((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      setSelectedApp(updated);
+      showSuccess(`Application marked as ${status}.`);
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        handleSessionExpired();
+      } else {
+        setActionError(err instanceof Error ? err.message : "An error occurred.");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleAppDelete() {
+    if (!selectedApp) return;
+    setActionLoading(true);
+    try {
+      await deleteApplication(selectedApp.id);
+      setApplications((prev) => prev.filter((a) => a.id !== selectedApp.id));
+      setSelectedApp(null);
+      showSuccess("Application deleted.");
+    } catch (err) {
+      if (err instanceof SessionExpiredError) {
+        handleSessionExpired();
+      } else {
+        setActionError(err instanceof Error ? err.message : "An error occurred.");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const filteredEvents = events.filter((e) =>
     filterStatus === "all" ? true : e.status === filterStatus,
   );
+
+  const filteredApps = applications.filter((a) =>
+    appFilterStatus === "all" ? true : a.status === appFilterStatus,
+  );
+
+  const pendingCount = applications.filter((a) => a.status === "pending").length;
 
   if (authed === null) {
     return (
@@ -508,7 +682,7 @@ export default function Admin() {
           <img src="/bfs-logo.png" alt="B&FS Logo" className="w-9 h-9 rounded-full" />
           <div>
             <h1 className="font-black text-lg leading-tight">B&FS Admin Panel</h1>
-            <p className="text-xs text-gray-400">Event Management</p>
+            <p className="text-xs text-gray-400">Management Dashboard</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -553,6 +727,33 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200 px-6">
+        <div className="max-w-6xl mx-auto flex gap-1">
+          {([
+            { key: "events", label: "Events" },
+            { key: "applications", label: "Applications", badge: pendingCount > 0 ? pendingCount : undefined },
+          ] as const).map(({ key, label, badge }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`px-5 py-4 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === key
+                  ? "border-[#C9A227] text-[#0A2540]"
+                  : "border-transparent text-gray-500 hover:text-[#0A2540]"
+              }`}
+            >
+              {label}
+              {badge !== undefined && (
+                <span className="bg-[#C9A227] text-[#0A2540] text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         {successMsg && (
           <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl font-medium text-sm">
@@ -565,106 +766,206 @@ export default function Admin() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-black text-[#0A2540]">Events</h2>
-            <p className="text-sm text-gray-500">{events.length} total events on the website</p>
-          </div>
-          <button
-            onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="bg-[#C9A227] text-[#0A2540] font-bold px-5 py-2.5 rounded-xl hover:bg-[#b8911f] transition flex items-center gap-2 shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add New Event
-          </button>
-        </div>
+        {/* ── EVENTS TAB ── */}
+        {activeTab === "events" && (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-[#0A2540]">Events</h2>
+                <p className="text-sm text-gray-500">{events.length} total events on the website</p>
+              </div>
+              <button
+                onClick={() => { setEditTarget(null); setShowForm(true); }}
+                className="bg-[#C9A227] text-[#0A2540] font-bold px-5 py-2.5 rounded-xl hover:bg-[#b8911f] transition flex items-center gap-2 shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add New Event
+              </button>
+            </div>
 
-        <div className="flex gap-2 mb-4">
-          {(["all", "upcoming", "past"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${
-                filterStatus === s
-                  ? "bg-[#0A2540] text-white"
-                  : "bg-white border border-gray-200 text-gray-600 hover:border-[#0A2540]"
-              }`}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-              {s === "upcoming" && (
-                <span className="ml-1.5 bg-[#C9A227] text-[#0A2540] text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                  {events.filter((e) => e.status === "upcoming").length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+            <div className="flex gap-2 mb-4">
+              {(["all", "upcoming", "past"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${
+                    filterStatus === s
+                      ? "bg-[#0A2540] text-white"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-[#0A2540]"
+                  }`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {s === "upcoming" && (
+                    <span className="ml-1.5 bg-[#C9A227] text-[#0A2540] text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                      {events.filter((e) => e.status === "upcoming").length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-        {eventsLoading ? (
-          <div className="text-center py-16 text-gray-400">Loading events…</div>
-        ) : eventsError ? (
-          <div className="text-center py-16 text-red-500">{eventsError}</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            No events found. Click "Add New Event" to get started.
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Event</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Date</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Category</th>
-                  <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
-                  <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-[#0A2540] leading-tight">{event.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{event.description}</p>
-                    </td>
-                    <td className="px-4 py-4 text-gray-600 hidden sm:table-cell whitespace-nowrap">{event.date}</td>
-                    <td className="px-4 py-4 hidden md:table-cell">
-                      <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                        {event.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                        event.status === "upcoming"
-                          ? "bg-green-50 text-green-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
-                        {event.status === "upcoming" ? "Upcoming" : "Past"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => { setEditTarget(event); setShowForm(true); }}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(event)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-400 hover:text-red-500 transition"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            {eventsLoading ? (
+              <div className="text-center py-16 text-gray-400">Loading events…</div>
+            ) : eventsError ? (
+              <div className="text-center py-16 text-red-500">{eventsError}</div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                No events found. Click "Add New Event" to get started.
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Event</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Date</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Category</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredEvents.map((event) => (
+                      <tr key={event.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-[#0A2540] leading-tight">{event.title}</p>
+                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{event.description}</p>
+                        </td>
+                        <td className="px-4 py-4 text-gray-600 hidden sm:table-cell whitespace-nowrap">{event.date}</td>
+                        <td className="px-4 py-4 hidden md:table-cell">
+                          <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                            {event.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                            event.status === "upcoming"
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {event.status === "upcoming" ? "Upcoming" : "Past"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => { setEditTarget(event); setShowForm(true); }}
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(event)}
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-400 hover:text-red-500 transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── APPLICATIONS TAB ── */}
+        {activeTab === "applications" && (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-[#0A2540]">Applications</h2>
+                <p className="text-sm text-gray-500">
+                  {applications.length} total · {pendingCount} pending review
+                </p>
+              </div>
+              <button
+                onClick={loadApplications}
+                disabled={appsLoading}
+                className="text-sm font-bold px-4 py-2 rounded-xl border border-gray-200 hover:border-[#0A2540] transition disabled:opacity-50"
+              >
+                {appsLoading ? "Refreshing…" : "↻ Refresh"}
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {(["all", "pending", "accepted", "rejected"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setAppFilterStatus(s)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-bold transition ${
+                    appFilterStatus === s
+                      ? "bg-[#0A2540] text-white"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-[#0A2540]"
+                  }`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  <span className="ml-1.5 text-[10px] font-black">
+                    ({s === "all" ? applications.length : applications.filter((a) => a.status === s).length})
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {appsLoading ? (
+              <div className="text-center py-16 text-gray-400">Loading applications…</div>
+            ) : appsError ? (
+              <div className="text-center py-16 text-red-500">{appsError}</div>
+            ) : filteredApps.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                {appFilterStatus === "all"
+                  ? "No applications yet. They will appear here once students submit the membership form."
+                  : `No ${appFilterStatus} applications.`}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Applicant</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Department</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Year</th>
+                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Applied</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredApps.map((app) => (
+                      <tr key={app.id} className="hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-[#0A2540] leading-tight">{app.name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{app.email}</p>
+                        </td>
+                        <td className="px-4 py-4 text-gray-600 hidden sm:table-cell">{app.department}</td>
+                        <td className="px-4 py-4 text-gray-600 hidden md:table-cell">{app.year}</td>
+                        <td className="px-4 py-4">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_STYLES[app.status] ?? "bg-gray-100 text-gray-500"}`}>
+                            {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-gray-400 text-xs text-right hidden sm:table-cell whitespace-nowrap">
+                          {app.createdAt ? new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedApp(app); }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                          >
+                            Review
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -685,6 +986,16 @@ export default function Admin() {
           event={deleteTarget}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+          loading={actionLoading}
+        />
+      )}
+
+      {selectedApp && (
+        <ApplicationDetailModal
+          app={selectedApp}
+          onClose={() => setSelectedApp(null)}
+          onStatusChange={handleAppStatusChange}
+          onDelete={handleAppDelete}
           loading={actionLoading}
         />
       )}
