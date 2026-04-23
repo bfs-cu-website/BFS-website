@@ -1,11 +1,13 @@
 export const founders = [
   {
     name: "Faisal Wahid",
-    education: "B.A. (Hons) Economics, Cotton University → M.A. Economics, University of Hyderabad"
+    education: "B.A. (Hons) Economics, Cotton University → M.A. Economics, University of Hyderabad",
+    photo: "/founder-faisal.png"
   },
   {
     name: "Bhabarnav Das",
-    education: "B.A. (Hons) Economics, Cotton University → MBA, IMT Hyderabad"
+    education: "B.A. (Hons) Economics, Cotton University → MBA, IMT Hyderabad",
+    photo: "/founder-bhabarnav.png"
   }
 ];
 

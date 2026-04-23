@@ -69,12 +69,18 @@ export default function About() {
             
             <div className="space-y-6">
               {founders.map((founder, i) => (
-                <div key={i} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl mb-4">
-                    {founder.name.charAt(0)}
+                <div key={i} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-5">
+                  <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border-2 border-accent/30 shadow-sm">
+                    <img
+                      src={founder.photo}
+                      alt={founder.name}
+                      className="w-full h-full object-cover object-top"
+                    />
                   </div>
-                  <h4 className="text-xl font-bold text-primary mb-2">{founder.name}</h4>
-                  <p className="text-sm text-muted-foreground">{founder.education}</p>
+                  <div>
+                    <h4 className="text-xl font-bold text-primary mb-1">{founder.name}</h4>
+                    <p className="text-sm text-muted-foreground">{founder.education}</p>
+                  </div>
                 </div>
               ))}
             </div>
