@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { timeline } from "@/data/timeline";
 import { founders } from "@/data/team";
-import { CheckCircle2, Target, TrendingUp, Users, Globe, BookOpen, Award, Lightbulb, Handshake } from "lucide-react";
+import { CheckCircle2, Target, TrendingUp, Users, Globe, BookOpen, Award, Lightbulb, Handshake, Network, Briefcase } from "lucide-react";
 
 export default function About() {
   return (
@@ -39,12 +39,45 @@ export default function About() {
           <div>
             <h2 className="text-3xl md:text-4xl font-black text-primary mb-3">Who We Are</h2>
             <div className="w-10 h-1 bg-accent mb-6 rounded-full"></div>
-            <p className="text-muted-foreground leading-relaxed font-serif mb-5">
+            <p className="text-muted-foreground leading-relaxed font-serif mb-4">
               The Business &amp; Finance Society is Cotton University's premier student platform for fostering financial literacy, entrepreneurship, and business acumen since 2021.
             </p>
-            <p className="text-muted-foreground leading-relaxed font-serif">
+            <p className="text-muted-foreground leading-relaxed font-serif mb-7">
               Founded by Faisal Wahid and Bhabarnav Das, we have grown into a thriving community organizing field visits, quizzes, fairs, and industry interactions that give students real-world exposure to finance and business.
             </p>
+
+            {/* Quick stats */}
+            <div className="grid grid-cols-3 gap-3 mb-7">
+              {[
+                { value: "2021", label: "Established" },
+                { value: "4+", label: "Years Active" },
+                { value: "2", label: "Biz Fair Editions" },
+              ].map((stat, i) => (
+                <div key={i} className="bg-primary/5 rounded-xl p-4 text-center border border-primary/10">
+                  <div className="text-2xl font-black text-primary mb-1">{stat.value}</div>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Three pillars */}
+            <div className="space-y-3">
+              {[
+                { icon: BookOpen, label: "Knowledge", desc: "Financial literacy and business education" },
+                { icon: Network,  label: "Networking", desc: "Industry connections and professional growth" },
+                { icon: Briefcase, label: "Opportunity", desc: "Platforms for practical experience" },
+              ].map(({ icon: Icon, label, desc }, i) => (
+                <div key={i} className="flex items-center gap-4 bg-white rounded-lg px-4 py-3 border border-gray-100 shadow-sm">
+                  <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-accent" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-primary text-sm">{label}</span>
+                    <span className="text-muted-foreground text-sm"> — {desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Our Vision */}
