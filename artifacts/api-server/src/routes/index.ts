@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import eventsRouter from "./events";
 import authRouter from "./auth";
 import storageRouter from "./storage";
+import applicationsRouter from "./applications";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(eventsRouter);
 router.use(storageRouter);
+router.use(applicationsRouter);
 
 export default router;
