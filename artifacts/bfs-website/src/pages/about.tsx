@@ -24,8 +24,50 @@ export default function About() {
       </section>
 
       <div className="container mx-auto px-4">
+
+        {/* Who We Are & Our Vision */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="grid md:grid-cols-2 gap-12 mb-20"
+        >
+          {/* Who We Are */}
+          <div>
+            <h2 className="text-3xl md:text-4xl font-black text-primary mb-3">Who We Are</h2>
+            <div className="w-10 h-1 bg-accent mb-6 rounded-full"></div>
+            <p className="text-muted-foreground leading-relaxed font-serif mb-5">
+              The Business &amp; Finance Society is Cotton University's premier student platform for fostering financial literacy, entrepreneurship, and business acumen since 2021.
+            </p>
+            <p className="text-muted-foreground leading-relaxed font-serif">
+              Founded by Faisal Wahid and Bhabarnav Das, we have grown into a thriving community organizing field visits, quizzes, fairs, and industry interactions that give students real-world exposure to finance and business.
+            </p>
+          </div>
+
+          {/* Our Vision */}
+          <div>
+            <h2 className="text-3xl md:text-4xl font-black text-primary mb-3">Our Vision</h2>
+            <div className="w-10 h-1 bg-accent mb-6 rounded-full"></div>
+            <ol className="space-y-5">
+              {[
+                "Nurture a culture of entrepreneurship, financial literacy, and innovation among students.",
+                "Create an inclusive platform that bridges academia with real-world business practices.",
+                "Build a dynamic community of future leaders who contribute through ethical business practices.",
+                "Foster global exposure by connecting students with business leaders and institutions."
+              ].map((point, i) => (
+                <li key={i} className="flex items-start gap-4">
+                  <span className="text-accent font-black text-lg leading-tight shrink-0 w-7">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <p className="text-muted-foreground font-serif leading-relaxed">{point}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </motion.div>
+
         <div className="grid md:grid-cols-2 gap-16 mb-24">
-          {/* Mission & Vision */}
+          {/* Mission & Why Join */}
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -87,7 +129,7 @@ export default function About() {
           </motion.div>
         </div>
 
-        {/* Timeline */}
+        {/* Timeline / History */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -99,17 +141,17 @@ export default function About() {
             <h3 className="text-3xl md:text-4xl font-bold text-primary">Our Journey So Far</h3>
           </div>
 
-          <div className="relative border-l-2 border-accent/30 pl-8 ml-4 md:ml-0 space-y-12">
+          <div className="relative border-l-2 border-accent/30 pl-8 ml-4 md:ml-0 space-y-10">
             {timeline.map((item, i) => (
               <div key={i} className="relative">
                 <div className="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-white border-4 border-accent shadow-sm"></div>
-                <div className="mb-1 text-sm font-bold text-accent tracking-wider">{item.date}</div>
-                <h4 className="text-xl font-bold text-primary mb-2">{item.title}</h4>
+                <div className="mb-2 text-sm font-bold text-accent tracking-wider uppercase">{item.date}</div>
                 <p className="text-muted-foreground font-serif leading-relaxed">{item.description}</p>
               </div>
             ))}
           </div>
         </motion.div>
+
       </div>
     </div>
   );
