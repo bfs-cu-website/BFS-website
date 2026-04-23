@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   fetchEvents,
   createEvent,
@@ -23,6 +23,43 @@ const DEFAULT_FORM: EventInput = {
   image: "",
 };
 
+function usePhotoUpload(onUploaded: (imageUrl: string) => void) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadFile = useCallback(async (file: File) => {
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const metaRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "application/octet-stream" }),
+      });
+      if (!metaRes.ok) {
+        const data = await metaRes.json() as { error?: string };
+        throw new Error(data.error ?? "Failed to get upload URL");
+      }
+      const { uploadURL, objectPath } = await metaRes.json() as { uploadURL: string; objectPath: string };
+
+      const putRes = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+      if (!putRes.ok) throw new Error("Upload to storage failed");
+
+      onUploaded(`/api/storage${objectPath}`);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  }, [onUploaded]);
+
+  return { uploadFile, isUploading, uploadError };
+}
+
 function EventForm({
   initial,
   onSave,
@@ -35,9 +72,18 @@ function EventForm({
   loading: boolean;
 }) {
   const [form, setForm] = useState<EventInput>(initial);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function set(key: keyof EventInput, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  const { uploadFile, isUploading, uploadError } = usePhotoUpload((url) => set("image", url));
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   return (
@@ -100,27 +146,74 @@ function EventForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Cover Image URL</label>
-            <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-              value={form.image}
-              onChange={(e) => set("image", e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-            />
-            <p className="text-xs text-gray-400 mt-1">Paste any image URL, or leave blank for a default.</p>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Cover Photo</label>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                value={form.image}
+                onChange={(e) => set("image", e.target.value)}
+                placeholder="https://images.unsplash.com/… or upload below"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#0A2540] text-white text-sm font-bold rounded-lg hover:bg-[#0d2f50] transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isUploading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload Photo
+                  </>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+            {uploadError && (
+              <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+            )}
+            {form.image && form.image.startsWith("/api/storage") && (
+              <div className="mt-2 flex items-center gap-2">
+                <img
+                  src={form.image}
+                  alt="Preview"
+                  className="w-16 h-10 object-cover rounded-md border border-gray-200"
+                />
+                <span className="text-xs text-green-600 font-medium">Photo uploaded</span>
+              </div>
+            )}
+            {!form.image && (
+              <p className="text-xs text-gray-400 mt-1">Upload a photo from your device, or paste an image URL above.</p>
+            )}
           </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button
             onClick={() => onSave(form)}
-            disabled={loading || !form.title || !form.date || !form.description}
+            disabled={loading || isUploading || !form.title || !form.date || !form.description}
             className="flex-1 bg-[#C9A227] text-[#0A2540] font-bold py-2.5 rounded-lg hover:bg-[#b8911f] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Saving…" : "Save Event"}
           </button>
           <button
             onClick={onCancel}
-            disabled={loading}
+            disabled={loading || isUploading}
             className="px-5 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-50 transition"
           >
             Cancel

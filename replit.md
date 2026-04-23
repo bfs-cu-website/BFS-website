@@ -18,7 +18,8 @@ Express 5 backend server for B&FS events management.
 - **Events API**: CRUD endpoints for events (`/api/events`)
 - **Auth API**: Session-based admin authentication (`/api/auth/login`, `/api/auth/logout`, `/api/auth/check`)
 - **Auth mechanism**: JWT stored in httpOnly cookie (`admin_session`), 8-hour expiry
-- **Env vars**: `ADMIN_PASSWORD` (secret), `JWT_SECRET` (shared env), `SESSION_DURATION_HOURS` (shared env, default 8)
+- **Storage API**: Object storage for event photo uploads (`/api/storage/uploads/request-url`, `/api/storage/objects/*`)
+- **Env vars**: `ADMIN_PASSWORD` (secret), `JWT_SECRET` (shared env), `SESSION_DURATION_HOURS` (shared env, default 8), `DEFAULT_OBJECT_STORAGE_BUCKET_ID` (secret), `PUBLIC_OBJECT_SEARCH_PATHS` (secret), `PRIVATE_OBJECT_DIR` (secret)
 
 ## Stack
 
