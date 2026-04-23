@@ -32,3 +32,15 @@ channel = "stable-25_05"
 
 [userenv.shared]
 SESSION_DURATION_HOURS = "8"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 80
+
+[[ports]]
+localPort = 21080
+externalPort = 3000
