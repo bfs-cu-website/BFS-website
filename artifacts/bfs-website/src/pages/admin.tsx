@@ -15,6 +15,9 @@ import {
 const CATEGORIES = ["Flagship", "Field Visit", "Orientation", "Competition", "Social", "Workshop", "Talk", "Other"];
 const STATUSES = ["upcoming", "past"];
 
+const SESSION_DURATION_MS = (Number(import.meta.env.VITE_SESSION_DURATION_HOURS) || 8) * 60 * 60 * 1000;
+const WARNING_THRESHOLD_MS = (Number(import.meta.env.VITE_SESSION_WARNING_MINUTES) || 5) * 60 * 1000;
+
 const DEFAULT_FORM: EventInput = {
   title: "",
   date: "",
@@ -295,11 +298,53 @@ export default function Admin() {
 
   const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "past">("all");
 
+  const [sessionWarnSeconds, setSessionWarnSeconds] = useState<number | null>(null);
+  const [extendingSession, setExtendingSession] = useState(false);
+  const lastRefreshRef = useRef<number>(Date.now());
+
   useEffect(() => {
     checkAdminSession()
-      .then((valid) => setAuthed(valid))
+      .then((valid) => {
+        if (valid) lastRefreshRef.current = Date.now();
+        setAuthed(valid);
+      })
       .catch(() => setAuthed(false));
   }, []);
+
+  useEffect(() => {
+    if (!authed) {
+      setSessionWarnSeconds(null);
+      return;
+    }
+    lastRefreshRef.current = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastRefreshRef.current;
+      const remaining = SESSION_DURATION_MS - elapsed;
+      if (remaining <= WARNING_THRESHOLD_MS) {
+        setSessionWarnSeconds(Math.max(0, Math.round(remaining / 1000)));
+      } else {
+        setSessionWarnSeconds(null);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [authed]);
+
+  async function handleExtendSession() {
+    setExtendingSession(true);
+    try {
+      const valid = await checkAdminSession();
+      if (valid) {
+        lastRefreshRef.current = Date.now();
+        setSessionWarnSeconds(null);
+      } else {
+        handleSessionExpired();
+      }
+    } catch {
+      handleSessionExpired();
+    } finally {
+      setExtendingSession(false);
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -307,6 +352,7 @@ export default function Admin() {
     setAuthError("");
     try {
       await loginAdmin(password);
+      lastRefreshRef.current = Date.now();
       setAuthed(true);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "An error occurred.");
@@ -327,6 +373,8 @@ export default function Admin() {
     try {
       const data = await fetchEvents();
       setEvents(data);
+      lastRefreshRef.current = Date.now();
+      setSessionWarnSeconds(null);
     } catch {
       setEventsError("Failed to load events. Please refresh.");
     }
@@ -363,6 +411,8 @@ export default function Admin() {
         await createEvent(data);
         showSuccess("Event added successfully.");
       }
+      lastRefreshRef.current = Date.now();
+      setSessionWarnSeconds(null);
       setShowForm(false);
       setEditTarget(null);
       await loadEvents();
@@ -383,6 +433,8 @@ export default function Admin() {
     setActionError("");
     try {
       await deleteEvent(deleteTarget.id);
+      lastRefreshRef.current = Date.now();
+      setSessionWarnSeconds(null);
       showSuccess("Event deleted successfully.");
       setDeleteTarget(null);
       await loadEvents();
@@ -474,6 +526,32 @@ export default function Admin() {
           </button>
         </div>
       </header>
+
+      {sessionWarnSeconds !== null && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
+            <svg className="w-4 h-4 flex-shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              Your session will expire in{" "}
+              <span className="font-bold tabular-nums">
+                {sessionWarnSeconds >= 60
+                  ? `${Math.ceil(sessionWarnSeconds / 60)} minute${Math.ceil(sessionWarnSeconds / 60) !== 1 ? "s" : ""}`
+                  : `${sessionWarnSeconds} second${sessionWarnSeconds !== 1 ? "s" : ""}`}
+              </span>
+              . Click to stay signed in.
+            </span>
+          </div>
+          <button
+            onClick={handleExtendSession}
+            disabled={extendingSession}
+            className="flex-shrink-0 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold px-4 py-1.5 rounded-lg transition"
+          >
+            {extendingSession ? "Extending…" : "Stay Signed In"}
+          </button>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {successMsg && (
