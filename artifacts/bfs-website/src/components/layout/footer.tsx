@@ -32,9 +32,6 @@ export function Footer() {
                 <Link href="/team" className="text-sm text-gray-300 hover:text-accent transition-colors">Our Team</Link>
               </li>
               <li>
-                <Link href="/blog" className="text-sm text-gray-300 hover:text-accent transition-colors">Insights Blog</Link>
-              </li>
-              <li>
                 <Link href="/resources" className="text-sm text-gray-300 hover:text-accent transition-colors">Resources</Link>
               </li>
             </ul>
