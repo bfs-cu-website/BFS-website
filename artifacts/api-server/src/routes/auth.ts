@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 
 const router: IRouter = Router();
 
@@ -13,7 +14,16 @@ function sessionExpiresIn(): number {
   return (Number(process.env.SESSION_DURATION_HOURS) || 8) * 60 * 60;
 }
 
-router.post("/auth/login", (req: Request, res: Response) => {
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many failed login attempts. Please try again in 15 minutes." },
+});
+
+router.post("/auth/login", loginRateLimiter, (req: Request, res: Response) => {
   const adminPassword = process.env.ADMIN_PASSWORD;
   const jwtSecret = process.env.JWT_SECRET;
 
