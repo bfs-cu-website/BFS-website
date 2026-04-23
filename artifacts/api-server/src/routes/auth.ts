@@ -58,6 +58,21 @@ router.post("/auth/logout", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+function refreshSession(res: Response): void {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) return;
+  const token = jwt.sign({ sub: "admin" }, jwtSecret, {
+    expiresIn: sessionExpiresIn(),
+  });
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== "development",
+    sameSite: "strict",
+    maxAge: sessionMaxAge(),
+    path: "/api",
+  });
+}
+
 router.get("/auth/check", (req: Request, res: Response) => {
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) {
@@ -73,11 +88,12 @@ router.get("/auth/check", (req: Request, res: Response) => {
 
   try {
     jwt.verify(token, jwtSecret);
+    refreshSession(res);
     res.json({ ok: true });
   } catch {
     res.status(401).json({ error: "Session expired or invalid." });
   }
 });
 
-export { COOKIE_NAME };
+export { COOKIE_NAME, refreshSession };
 export default router;

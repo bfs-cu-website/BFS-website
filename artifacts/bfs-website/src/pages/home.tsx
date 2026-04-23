@@ -62,9 +62,8 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-
       {/* STATS SECTION */}
-      <section className="py-16 bg-white relative z-20 -mt-10 mx-4 md:mx-auto container rounded-xl shadow-xl shadow-primary/5">
+      <section className="py-16 relative z-20 mx-4 md:mx-auto container rounded-xl shadow-xl shadow-primary/5 ml-[10px] mr-[15px] bg-[#e6e8f5] opacity-[1] mt-[0px] mb-[0px]">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 px-8">
           {[
             { label: "Founded", value: "2021" },
@@ -86,7 +85,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
       {/* ABOUT PREVIEW */}
       <section className="py-24 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -143,7 +141,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* UPCOMING EVENTS */}
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4">
@@ -194,7 +191,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* PAST EVENTS HIGHLIGHTS */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -242,7 +238,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* FEATURED BLOG POSTS */}
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4">
@@ -290,7 +285,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* BIZ FAIR HIGHLIGHT */}
       <section className="py-20 bg-primary relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
@@ -330,7 +324,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* CALL TO ACTION */}
       <section className="py-24 bg-gray-50">
         <div className="container mx-auto px-4 text-center max-w-3xl">
