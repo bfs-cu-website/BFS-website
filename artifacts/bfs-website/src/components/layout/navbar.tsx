@@ -30,10 +30,12 @@ export function Navbar() {
     { href: "/resources", label: "Resources" },
   ];
 
+  const solidBg = isScrolled || location !== "/";
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-primary shadow-md py-3" : "bg-transparent py-5"
+        solidBg ? "bg-primary shadow-md py-3" : "bg-transparent py-5"
       }`}
     >
       <div className="container mx-auto px-4 md:px-6">
@@ -55,11 +57,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`text-sm font-medium transition-colors hover:text-accent ${
-                    location === link.href
-                      ? "text-accent"
-                      : isScrolled || location !== "/"
-                      ? "text-gray-200"
-                      : "text-gray-200"
+                    location === link.href ? "text-accent" : "text-gray-200"
                   }`}
                 >
                   {link.label}
