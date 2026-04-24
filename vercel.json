@@ -1,5 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+"installCommand": "pnpm install --frozen-lockfile",
+"buildCommand": "pnpm --filter @workspace/bfs-website build",
+"outputDirectory": "artifacts/bfs-website/dist/public",
+"rewrites": [
+{ "source": "/api/(.*)", "destination": "https://bfs-website.onrender.com/api/$1" }
+]
 }
