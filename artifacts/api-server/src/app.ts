@@ -28,7 +28,21 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+// CORS — restrict to ALLOWED_ORIGIN in production; reflect origin in dev.
+// When deploying frontend and backend to different domains (e.g. Vercel +
+// Railway), set ALLOWED_ORIGIN to your frontend URL so cookies work correctly.
+// Multiple origins can be comma-separated: "https://a.com,https://b.com"
+const allowedOrigin = process.env.ALLOWED_ORIGIN;
+app.use(
+  cors({
+    origin: allowedOrigin
+      ? allowedOrigin.split(",").map((o) => o.trim())
+      : true,
+    credentials: true,
+  }),
+);
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
