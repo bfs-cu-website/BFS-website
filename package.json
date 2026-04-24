@@ -16,7 +16,16 @@
   "pnpm": {
     "overrides": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "micromatch>picomatch": "^2.3.2",
+      "vite>picomatch": "^4.0.4",
+      "router>path-to-regexp": "^8.4.0",
+      "recharts>lodash": "^4.18.1",
+      "yaml": "^2.8.3",
+      "minimatch>brace-expansion": "^2.0.3",
+      "uuid": "^14.0.0",
+      "http-proxy-agent>@tootallnate/once": "^3.0.1",
+      "@esbuild-kit/core-utils>esbuild": "^0.25.0"
     }
   }
 }
