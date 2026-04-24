@@ -15,12 +15,23 @@ export const applicationsTable = pgTable("applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertApplicationSchema = createInsertSchema(applicationsTable).omit({
-  id: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-});
+const ALLOWED_YEARS = ["1st", "2nd", "3rd", "4th", "pg1", "pg2"] as const;
+
+export const insertApplicationSchema = createInsertSchema(applicationsTable)
+  .omit({
+    id: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    name: z.string().min(2).max(100),
+    email: z.email().max(254),
+    department: z.string().min(2).max(200),
+    year: z.enum(ALLOWED_YEARS),
+    interests: z.string().min(1).max(500),
+    essay: z.string().min(50).max(5000),
+  });
 
 export const selectApplicationSchema = createSelectSchema(applicationsTable);
 

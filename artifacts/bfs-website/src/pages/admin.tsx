@@ -38,30 +38,37 @@ function usePhotoUpload(onUploaded: (imageUrl: string) => void, onSessionExpired
   const uploadFile = useCallback(async (file: File) => {
     setIsUploading(true);
     setUploadError(null);
+
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"];
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setUploadError("Only JPEG, PNG, GIF, WebP, and AVIF images are allowed.");
+      setIsUploading(false);
+      return;
+    }
+    if (file.size > MAX_SIZE_BYTES) {
+      setUploadError("File is too large. Maximum allowed size is 10 MB.");
+      setIsUploading(false);
+      return;
+    }
+
     try {
-      const metaRes = await fetch("/api/storage/uploads/request-url", {
+      const uploadRes = await fetch("/api/storage/uploads/data", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "application/octet-stream" }),
+        headers: { "Content-Type": file.type },
+        body: file,
       });
-      if (metaRes.status === 401) {
+      if (uploadRes.status === 401) {
         onSessionExpired();
         return;
       }
-      if (!metaRes.ok) {
-        const data = await metaRes.json() as { error?: string };
-        throw new Error(data.error ?? "Failed to get upload URL");
+      if (!uploadRes.ok) {
+        const data = await uploadRes.json() as { error?: string };
+        throw new Error(data.error ?? "Upload failed");
       }
-      const { uploadURL, objectPath } = await metaRes.json() as { uploadURL: string; objectPath: string };
-
-      const putRes = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-      });
-      if (!putRes.ok) throw new Error("Upload to storage failed");
-
+      const { objectPath } = await uploadRes.json() as { objectPath: string };
       onUploaded(`/api/storage${objectPath}`);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");

@@ -5,9 +5,11 @@ import { events as staticEvents } from "@/data/events";
 const POLL_INTERVAL_MS = 60_000;
 
 export function useEvents() {
-  const [events, setEvents] = useState<ApiEvent[]>(staticEvents);
+  const [events, setEvents] = useState<ApiEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const initializedRef = useRef(false);
 
   async function load() {
     abortRef.current?.abort();
@@ -19,9 +21,16 @@ export function useEvents() {
       if (!controller.signal.aborted) {
         setEvents(data);
         setLastUpdated(new Date());
+        setLoading(false);
+        initializedRef.current = true;
       }
     } catch {
-      // Keep existing data (static fallback or last successful fetch)
+      if (!controller.signal.aborted && !initializedRef.current) {
+        // Only fall back to static data on the first load if the API fails
+        setEvents(staticEvents);
+        setLoading(false);
+        initializedRef.current = true;
+      }
     }
   }
 
@@ -36,5 +45,5 @@ export function useEvents() {
     };
   }, []);
 
-  return { events, lastUpdated };
+  return { events, loading, lastUpdated };
 }

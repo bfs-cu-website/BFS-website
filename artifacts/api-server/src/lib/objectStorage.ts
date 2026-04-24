@@ -1,6 +1,7 @@
 import { Storage, File } from "@google-cloud/storage";
-import { Readable } from "stream";
+import { Readable, Writable } from "stream";
 import { randomUUID } from "crypto";
+import type { IncomingMessage } from "http";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
@@ -27,6 +28,14 @@ export class ObjectNotFoundError extends Error {
     super("Object not found");
     this.name = "ObjectNotFoundError";
     Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
+  }
+}
+
+export class UploadTooLargeError extends Error {
+  constructor() {
+    super("Upload exceeds maximum allowed size");
+    this.name = "UploadTooLargeError";
+    Object.setPrototypeOf(this, UploadTooLargeError.prototype);
   }
 }
 
@@ -97,30 +106,80 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  /**
+   * Streams an upload directly through the server into GCS.
+   * Enforces maxBytes in real-time during streaming — if the stream exceeds
+   * the limit, the write is aborted and UploadTooLargeError is thrown before
+   * GCS commits any data.  Nothing is written under the staging prefix; the
+   * file goes straight to the servable uploads/ prefix only after the full
+   * byte-count passes the limit check.
+   */
+  async uploadObjectEntity(
+    readable: IncomingMessage | Readable,
+    contentType: string,
+    maxBytes: number,
+  ): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-
     const objectId = randomUUID();
     const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
     const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const destFile = bucket.file(objectName);
 
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
+    const writeStream: Writable = destFile.createWriteStream({
+      contentType,
+      resumable: false,
     });
+
+    await new Promise<void>((resolve, reject) => {
+      let bytesReceived = 0;
+      let limitExceeded = false;
+
+      readable.on("data", (chunk: Buffer) => {
+        bytesReceived += chunk.length;
+        if (bytesReceived > maxBytes) {
+          limitExceeded = true;
+          readable.destroy();
+          writeStream.destroy();
+          reject(new UploadTooLargeError());
+          return;
+        }
+        if (!writeStream.destroyed) {
+          writeStream.write(chunk);
+        }
+      });
+
+      readable.on("end", () => {
+        if (!limitExceeded) {
+          writeStream.end();
+        }
+      });
+
+      readable.on("error", (err) => {
+        if (!limitExceeded) {
+          writeStream.destroy();
+          reject(err);
+        }
+      });
+
+      writeStream.on("finish", resolve);
+
+      writeStream.on("error", (err) => {
+        if (!limitExceeded) {
+          reject(err);
+        }
+      });
+    });
+
+    return `/objects/uploads/${objectId}`;
   }
 
   async getObjectEntityFile(objectPath: string): Promise<File> {
     if (!objectPath.startsWith("/objects/")) {
+      throw new ObjectNotFoundError();
+    }
+
+    if (objectPath.startsWith("/objects/staging/")) {
       throw new ObjectNotFoundError();
     }
 
@@ -226,3 +285,5 @@ async function signObjectURL({
   const body = (await response.json()) as { signed_url: string };
   return body.signed_url;
 }
+
+export { signObjectURL };
