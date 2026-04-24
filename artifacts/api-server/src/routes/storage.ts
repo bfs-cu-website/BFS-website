@@ -1,15 +1,21 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
 import jwt from "jsonwebtoken";
-import {
-  RequestUploadUrlBody,
-  RequestUploadUrlResponse,
-} from "@workspace/api-zod";
-import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { ObjectStorageService, ObjectNotFoundError, UploadTooLargeError } from "../lib/objectStorage";
 import { COOKIE_NAME, refreshSession } from "./auth";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+]);
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 function requireAdmin(req: Request, res: Response): boolean {
   const jwtSecret = process.env.JWT_SECRET;
@@ -32,23 +38,42 @@ function requireAdmin(req: Request, res: Response): boolean {
   }
 }
 
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+/**
+ * Upload an event photo through the server.
+ * The server streams the request body directly to GCS while counting bytes in
+ * real time.  If the stream exceeds MAX_UPLOAD_BYTES the write is aborted
+ * before GCS commits any data and 413 is returned.  Content-Type is taken from
+ * the request header (not a client-declared JSON field) and validated against
+ * an image-only allowlist before any data is read.
+ */
+router.post("/storage/uploads/data", async (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
 
-  const parsed = RequestUploadUrlBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Missing or invalid required fields" });
+  const contentType = String(req.headers["content-type"] || "");
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(contentType)) {
+    res.status(415).json({ error: "Unsupported file type. Only JPEG, PNG, GIF, WebP, and AVIF images are allowed." });
     return;
   }
 
+  const contentLengthHeader = req.headers["content-length"];
+  if (contentLengthHeader !== undefined) {
+    const declaredLength = parseInt(contentLengthHeader, 10);
+    if (!isNaN(declaredLength) && declaredLength > MAX_UPLOAD_BYTES) {
+      res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
+      return;
+    }
+  }
+
   try {
-    const { name, size, contentType } = parsed.data;
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-    const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
-    res.json(RequestUploadUrlResponse.parse({ uploadURL, objectPath, metadata: { name, size, contentType } }));
+    const objectPath = await objectStorageService.uploadObjectEntity(req, contentType, MAX_UPLOAD_BYTES);
+    res.json({ objectPath });
   } catch (error) {
-    req.log.error({ err: error }, "Error generating upload URL");
-    res.status(500).json({ error: "Failed to generate upload URL" });
+    if (error instanceof UploadTooLargeError) {
+      res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
+      return;
+    }
+    req.log.error({ err: error }, "Error uploading file");
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
@@ -75,8 +100,13 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
   }
 });
 
-// Event photos are intentionally public — they are displayed to all website visitors.
-// Upload access is admin-gated (see POST /storage/uploads/request-url above).
+/**
+ * Serve confirmed event photos.
+ * getObjectEntityFile() rejects staging paths at the library level so
+ * unconfirmed / directly-staged objects are never reachable.
+ * Only allowlisted image MIME types are served inline; everything else is
+ * forced to an attachment download (defense-in-depth for legacy objects).
+ */
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
@@ -86,6 +116,17 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const response = await objectStorageService.downloadObject(objectFile);
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+
+    const storedContentType = response.headers.get("content-type") ?? "application/octet-stream";
+    if (ALLOWED_IMAGE_MIME_TYPES.has(storedContentType)) {
+      res.setHeader("Content-Type", storedContentType);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    } else {
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", "attachment");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
+
     if (response.body) {
       Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
     } else {
