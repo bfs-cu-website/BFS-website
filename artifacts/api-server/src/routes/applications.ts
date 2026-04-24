@@ -2,9 +2,18 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, applicationsTable, insertApplicationSchema } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import { COOKIE_NAME, refreshSession } from "./auth";
 
 const router: IRouter = Router();
+
+const applicationRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many applications submitted from this IP. Please try again later." },
+});
 
 function requireAdmin(req: Request, res: Response): boolean {
   const jwtSecret = process.env.JWT_SECRET;
@@ -36,7 +45,7 @@ function isZodError(err: unknown): err is { issues: unknown[] } {
   );
 }
 
-router.post("/applications", async (req, res) => {
+router.post("/applications", applicationRateLimiter, async (req, res) => {
   try {
     const body = req.body as {
       name?: unknown;
@@ -54,12 +63,23 @@ router.post("/applications", async (req, res) => {
 
     const parsed = insertApplicationSchema.parse({
       name: body.name,
-      email: body.email,
+      email: typeof body.email === "string" ? body.email.trim().toLowerCase() : body.email,
       department: body.department,
       year: body.year,
       interests: interestsStr,
       essay: body.essay,
     });
+
+    const existing = await db
+      .select({ id: applicationsTable.id })
+      .from(applicationsTable)
+      .where(eq(applicationsTable.email, parsed.email))
+      .limit(1);
+
+    if (existing.length > 0) {
+      res.status(409).json({ error: "An application with this email address already exists." });
+      return;
+    }
 
     const [created] = await db
       .insert(applicationsTable)
