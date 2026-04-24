@@ -684,27 +684,29 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <img src="/bfs-logo.png" alt="B&FS Logo" className="w-9 h-9 rounded-full" />
-          <div>
-            <h1 className="font-black text-lg leading-tight">B&FS Admin Panel</h1>
-            <p className="text-xs text-gray-400">Management Dashboard</p>
+      <header className="bg-[#0A2540] text-white px-4 py-3 shadow-lg">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img src="/bfs-logo.png" alt="B&FS Logo" className="w-8 h-8 rounded-full flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className="font-black text-base leading-tight">B&FS Admin Panel</h1>
+              <p className="text-[11px] text-gray-400">Management Dashboard</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="text-sm text-gray-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10"
-          >
-            ← View Website
-          </a>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-gray-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10"
-          >
-            Sign Out
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <a
+              href="/"
+              className="text-xs text-gray-300 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-white/10 whitespace-nowrap"
+            >
+              ← Website
+            </a>
+            <button
+              onClick={handleSignOut}
+              className="text-xs text-gray-300 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-white/10 whitespace-nowrap"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -822,60 +824,95 @@ export default function Admin() {
                 No events found. Click "Add New Event" to get started.
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Event</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Date</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Category</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredEvents.map((event) => (
-                      <tr key={event.id} className="hover:bg-gray-50/50 transition">
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-[#0A2540] leading-tight">{event.title}</p>
-                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{event.description}</p>
-                        </td>
-                        <td className="px-4 py-4 text-gray-600 hidden sm:table-cell whitespace-nowrap">{event.date}</td>
-                        <td className="px-4 py-4 hidden md:table-cell">
-                          <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                            {event.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                            event.status === "upcoming"
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}>
-                            {event.status === "upcoming" ? "Upcoming" : "Past"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => { setEditTarget(event); setShowForm(true); }}
-                              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(event)}
-                              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-400 hover:text-red-500 transition"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-3">
+                  {filteredEvents.map((event) => (
+                    <div key={event.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="font-bold text-[#0A2540] leading-tight text-sm">{event.title}</p>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                          event.status === "upcoming" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {event.status === "upcoming" ? "Upcoming" : "Past"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mb-1">{event.date} · {event.category}</p>
+                      <p className="text-xs text-gray-500 mb-3 line-clamp-1">{event.description}</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setEditTarget(event); setShowForm(true); }}
+                          className="flex-1 text-xs font-bold py-2 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(event)}
+                          className="flex-1 text-xs font-bold py-2 rounded-lg border border-gray-200 hover:border-red-400 hover:text-red-500 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Event</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Date</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Category</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
+                        <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredEvents.map((event) => (
+                        <tr key={event.id} className="hover:bg-gray-50/50 transition">
+                          <td className="px-6 py-4">
+                            <p className="font-semibold text-[#0A2540] leading-tight">{event.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{event.description}</p>
+                          </td>
+                          <td className="px-4 py-4 text-gray-600 hidden sm:table-cell whitespace-nowrap">{event.date}</td>
+                          <td className="px-4 py-4 hidden md:table-cell">
+                            <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                              {event.category}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                              event.status === "upcoming"
+                                ? "bg-green-50 text-green-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}>
+                              {event.status === "upcoming" ? "Upcoming" : "Past"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => { setEditTarget(event); setShowForm(true); }}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget(event)}
+                                className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-red-400 hover:text-red-500 transition"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </>
         )}
@@ -929,48 +966,79 @@ export default function Admin() {
                   : `No ${appFilterStatus} applications.`}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Applicant</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Department</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Year</th>
-                      <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Applied</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredApps.map((app) => (
-                      <tr key={app.id} className="hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-[#0A2540] leading-tight">{app.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{app.email}</p>
-                        </td>
-                        <td className="px-4 py-4 text-gray-600 hidden sm:table-cell">{app.department}</td>
-                        <td className="px-4 py-4 text-gray-600 hidden md:table-cell">{app.year}</td>
-                        <td className="px-4 py-4">
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_STYLES[app.status] ?? "bg-gray-100 text-gray-500"}`}>
-                            {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-gray-400 text-xs text-right hidden sm:table-cell whitespace-nowrap">
-                          {app.createdAt ? new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSelectedApp(app); }}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
-                          >
-                            Review
-                          </button>
-                        </td>
+              <>
+                {/* Mobile card view */}
+                <div className="sm:hidden space-y-3">
+                  {filteredApps.map((app) => (
+                    <div
+                      key={app.id}
+                      className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm cursor-pointer active:bg-gray-50"
+                      onClick={() => setSelectedApp(app)}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#0A2540] text-sm leading-tight">{app.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{app.email}</p>
+                        </div>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_STYLES[app.status] ?? "bg-gray-100 text-gray-500"}`}>
+                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">{app.department} · {app.year}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedApp(app); }}
+                        className="w-full text-xs font-bold py-2 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                      >
+                        Review Application
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="text-left px-6 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Applicant</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Department</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs hidden md:table-cell">Year</th>
+                        <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wider text-xs">Status</th>
+                        <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs hidden sm:table-cell">Applied</th>
+                        <th className="px-4 py-3 text-right font-bold text-gray-500 uppercase tracking-wider text-xs">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredApps.map((app) => (
+                        <tr key={app.id} className="hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedApp(app)}>
+                          <td className="px-6 py-4">
+                            <p className="font-semibold text-[#0A2540] leading-tight">{app.name}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{app.email}</p>
+                          </td>
+                          <td className="px-4 py-4 text-gray-600 hidden sm:table-cell">{app.department}</td>
+                          <td className="px-4 py-4 text-gray-600 hidden md:table-cell">{app.year}</td>
+                          <td className="px-4 py-4">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_STYLES[app.status] ?? "bg-gray-100 text-gray-500"}`}>
+                              {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-gray-400 text-xs text-right hidden sm:table-cell whitespace-nowrap">
+                            {app.createdAt ? new Date(app.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedApp(app); }}
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#C9A227] hover:text-[#C9A227] transition"
+                            >
+                              Review
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </>
         )}
