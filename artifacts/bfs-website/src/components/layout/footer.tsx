@@ -55,7 +55,7 @@ export function Footer() {
             <h4 className="text-lg font-bold mb-4 text-white">Connect With Us</h4>
             <div className="flex gap-4">
               <a
-                href="https://www.instagram.com/bfs.cottonuniversity"
+                href="https://www.instagram.com/businessandfinance.society"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-accent hover:text-primary transition-all"
