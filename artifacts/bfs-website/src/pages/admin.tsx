@@ -210,7 +210,7 @@ function EventForm({
             {uploadError && (
               <p className="text-xs text-red-500 mt-1">{uploadError}</p>
             )}
-            {form.image && form.image.startsWith("/api/storage") && (
+            {form.image && form.image.startsWith("http") && (
               <div className="mt-2 flex items-center gap-2">
                 <img
                   src={form.image}
