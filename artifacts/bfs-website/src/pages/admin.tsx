@@ -68,8 +68,8 @@ function usePhotoUpload(onUploaded: (imageUrl: string) => void, onSessionExpired
         const data = await uploadRes.json() as { error?: string };
         throw new Error(data.error ?? "Upload failed");
       }
-      const { objectPath } = await uploadRes.json() as { objectPath: string };
-      onUploaded(`/api/storage${objectPath}`);
+      const { url } = await uploadRes.json() as { url: string };
+      onUploaded(url);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
