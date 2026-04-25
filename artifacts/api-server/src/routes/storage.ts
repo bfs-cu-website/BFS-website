@@ -1,11 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { Readable } from "stream";
+import { v2 as cloudinary } from "cloudinary";
 import jwt from "jsonwebtoken";
-import { ObjectStorageService, ObjectNotFoundError, UploadTooLargeError } from "../lib/objectStorage";
 import { COOKIE_NAME, refreshSession } from "./auth";
 
 const router: IRouter = Router();
-const objectStorageService = new ObjectStorageService();
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
@@ -38,16 +36,24 @@ function requireAdmin(req: Request, res: Response): boolean {
   }
 }
 
-/**
- * Upload an event photo through the server.
- * The server streams the request body directly to GCS while counting bytes in
- * real time.  If the stream exceeds MAX_UPLOAD_BYTES the write is aborted
- * before GCS commits any data and 413 is returned.  Content-Type is taken from
- * the request header (not a client-declared JSON field) and validated against
- * an image-only allowlist before any data is read.
- */
+function getCloudinaryConfig(): { cloudName: string; apiKey: string; apiSecret: string } | null {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return null;
+  return { cloudName, apiKey, apiSecret };
+}
+
 router.post("/storage/uploads/data", async (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
+
+  const config = getCloudinaryConfig();
+  if (!config) {
+    res.status(503).json({
+      error: "Image uploads are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET on the server.",
+    });
+    return;
+  }
 
   const contentType = String(req.headers["content-type"] || "");
   if (!ALLOWED_IMAGE_MIME_TYPES.has(contentType)) {
@@ -64,81 +70,49 @@ router.post("/storage/uploads/data", async (req: Request, res: Response) => {
     }
   }
 
+  cloudinary.config({
+    cloud_name: config.cloudName,
+    api_key: config.apiKey,
+    api_secret: config.apiSecret,
+  });
+
   try {
-    const objectPath = await objectStorageService.uploadObjectEntity(req, contentType, MAX_UPLOAD_BYTES);
-    res.json({ objectPath });
+    const url = await new Promise<string>((resolve, reject) => {
+      let bytesReceived = 0;
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "bfs-events", resource_type: "image" },
+        (error, result) => {
+          if (error) reject(new Error(error.message));
+          else if (result) resolve(result.secure_url);
+          else reject(new Error("No result from Cloudinary"));
+        }
+      );
+
+      req.on("data", (chunk: Buffer) => {
+        bytesReceived += chunk.length;
+        if (bytesReceived > MAX_UPLOAD_BYTES) {
+          req.destroy();
+          uploadStream.destroy();
+          reject(new Error("FILE_TOO_LARGE"));
+          return;
+        }
+        uploadStream.write(chunk);
+      });
+
+      req.on("end", () => uploadStream.end());
+      req.on("error", (err) => reject(err));
+    });
+
+    res.json({ url });
   } catch (error) {
-    if (error instanceof UploadTooLargeError) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg === "FILE_TOO_LARGE") {
       res.status(413).json({ error: "File too large. Maximum allowed size is 10 MB." });
       return;
     }
-    req.log.error({ err: error }, "Error uploading file");
-    res.status(500).json({ error: "Upload failed" });
-  }
-});
-
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
-  try {
-    const raw = req.params.filePath;
-    const filePath = Array.isArray(raw) ? raw.join("/") : raw;
-    const file = await objectStorageService.searchPublicObject(filePath);
-    if (!file) {
-      res.status(404).json({ error: "File not found" });
-      return;
-    }
-    const response = await objectStorageService.downloadObject(file);
-    res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
-    if (response.body) {
-      Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
-    } else {
-      res.end();
-    }
-  } catch (error) {
-    req.log.error({ err: error }, "Error serving public object");
-    res.status(500).json({ error: "Failed to serve public object" });
-  }
-});
-
-/**
- * Serve confirmed event photos.
- * getObjectEntityFile() rejects staging paths at the library level so
- * unconfirmed / directly-staged objects are never reachable.
- * Only allowlisted image MIME types are served inline; everything else is
- * forced to an attachment download (defense-in-depth for legacy objects).
- */
-router.get("/storage/objects/*path", async (req: Request, res: Response) => {
-  try {
-    const raw = req.params.path;
-    const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
-    const objectPath = `/objects/${wildcardPath}`;
-    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
-    const response = await objectStorageService.downloadObject(objectFile);
-    res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
-
-    const storedContentType = response.headers.get("content-type") ?? "application/octet-stream";
-    if (ALLOWED_IMAGE_MIME_TYPES.has(storedContentType)) {
-      res.setHeader("Content-Type", storedContentType);
-      res.setHeader("X-Content-Type-Options", "nosniff");
-    } else {
-      res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Disposition", "attachment");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-    }
-
-    if (response.body) {
-      Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
-    } else {
-      res.end();
-    }
-  } catch (error) {
-    if (error instanceof ObjectNotFoundError) {
-      res.status(404).json({ error: "Object not found" });
-      return;
-    }
-    req.log.error({ err: error }, "Error serving object");
-    res.status(500).json({ error: "Failed to serve object" });
+    req.log.error({ err: error }, "Error uploading file to Cloudinary");
+    res.status(500).json({ error: "Upload failed. Please try again." });
   }
 });
 
