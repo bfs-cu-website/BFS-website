@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEvents } from "@/lib/useEvents";
-import { Calendar, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 
 function EventSkeleton() {
   return (
@@ -115,13 +114,6 @@ export default function Events() {
                       <p className="text-muted-foreground text-sm mb-6 flex-1 font-serif leading-relaxed">
                         {event.description}
                       </p>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-between group-hover:border-accent group-hover:text-accent transition-colors"
-                      >
-                        View Details
-                        <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                      </Button>
                     </div>
                   </motion.div>
                 ))}
