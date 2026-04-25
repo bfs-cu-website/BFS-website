@@ -77,9 +77,26 @@ router.post("/storage/uploads/data", async (req: Request, res: Response) => {
   });
 
   try {
-    const url = await new Promise<string>((resolve, reject) => {
-      let bytesReceived = 0;
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
 
+    await new Promise<void>((resolve, reject) => {
+      req.on("data", (chunk: Buffer) => {
+        totalBytes += chunk.length;
+        if (totalBytes > MAX_UPLOAD_BYTES) {
+          req.destroy();
+          reject(new Error("FILE_TOO_LARGE"));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      req.on("end", resolve);
+      req.on("error", reject);
+    });
+
+    const fileBuffer = Buffer.concat(chunks);
+
+    const url = await new Promise<string>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: "bfs-events", resource_type: "image" },
         (error, result) => {
@@ -88,20 +105,7 @@ router.post("/storage/uploads/data", async (req: Request, res: Response) => {
           else reject(new Error("No result from Cloudinary"));
         }
       );
-
-      req.on("data", (chunk: Buffer) => {
-        bytesReceived += chunk.length;
-        if (bytesReceived > MAX_UPLOAD_BYTES) {
-          req.destroy();
-          uploadStream.destroy();
-          reject(new Error("FILE_TOO_LARGE"));
-          return;
-        }
-        uploadStream.write(chunk);
-      });
-
-      req.on("end", () => uploadStream.end());
-      req.on("error", (err) => reject(err));
+      uploadStream.end(fileBuffer);
     });
 
     res.json({ url });
